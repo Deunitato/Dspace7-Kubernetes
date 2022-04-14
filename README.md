@@ -1,4 +1,5 @@
 # Dspace7-Kubernetes
+![image](https://user-images.githubusercontent.com/30222548/163345210-5184c428-7442-410a-9a96-1ccf466ec250.png)
 
 There are two types of K8s folder, `Local` and `AKS`. `Local` is meant for user to try out using `minikube` while `AKS` is for cloud deployment. Read the PDF to find out more information.
 
