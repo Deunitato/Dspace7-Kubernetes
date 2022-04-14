@@ -1,0 +1,46 @@
+# https://stackoverflow.com/questions/57317501/kubernetes-modeling-jobs-cron-tasks-for-postgres-tomcat-application
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-config-map
+  namespace: default
+data:
+  # local.cfg is use for backend only
+  # environment.prod.ts is used for frontend only
+  local.cfg: |-
+    db.url = jdbc:postgresql://alp-pg-dev.postgres.database.azure.com:5432/dspace
+    db.username = <DSPACE POSTGRESS ACCOUNT>
+    db.password = <DSPACE POSTGRESS PASSWORD>
+    dspace.ui.url=http://dspace.info
+    dspace.server.url=http://dspace.info/server
+    solr.server=http://localhost:8983/solr
+    useProxies = true
+    proxies.trusted.ipranges = 127.0.0.1, 192.168.64, 172.23.0, 10.0.56, 10.0.0, 172.19.0.
+    proxies.trusted.include_ui_ip = true
+    
+    rest.cors.allowed-origins = ${dspace.ui.url}, http://localhost:4000, http://localhost:8080, http://dspace-service:4000, http://dspace-service:8080, http://dspace.info, http://dspace.info:80
+
+  # Change the environment to what is access within the pod. In this case
+  # becuase its a pod, this environment is for the pod to know where it should connect to (Likethe backend)
+  # Tried to use localhost for this but it does not work. 
+  # Accessing it through the browser, the connection would be redirected to the front end pod whou using the
+  # environement defined in this file (environment.prod.ts), get the rest's address and query there
+  #
+  # In minikube, there seem to be some lags unfortunately and require constant pressing of the refresh button
+  # on the frontend in order to properly load the data
+  environment.dev.ts: |-
+    export const environment = {
+      rest: {
+        ssl: false,
+        host: 'dspace.info',
+        port: 80,
+        // NOTE: Space is capitalized because 'namespace' is a reserved string in TypeScript
+        nameSpace: '/server'
+      },
+      ui: {
+        ssl: false,
+        host: '0.0.0.0',
+        port: 4000,
+        nameSpace: '/'
+      }
+    };

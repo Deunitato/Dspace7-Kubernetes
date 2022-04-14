@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dspace-deploy
+  labels:
+    app: dspace-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dspace-app
+  template:
+    metadata:
+      labels:
+        app: dspace-app
+    spec:
+      volumes:
+      - name: "assetstore"
+        hostPath:
+          path: "/tmp/v7vols/assetstore"
+      - name: my-local-config-map
+        configMap:
+          name: local-config-map
+      - name: "solr-authority"
+        hostPath:
+          path: "/tmp/v7vols/solr-authority"
+      - name: "solr-oai"
+        hostPath:
+          path: "/tmp/v7vols/solr-oai"
+      - name: "solr-search"
+        hostPath:
+          path: "/tmp/v7vols/solr-search"
+      - name: "solr-statistics"
+        hostPath:
+          path: "/tmp/v7vols/solr-statistics"
+      - name: "pgdata-vol"
+        hostPath:
+          path: "/tmp/v7vols/pgdata"
+      containers:
+        - image: alpdspace.azurecr.io/dspace-angular:dev-v0.1
+          name: dspace-angular
+          ports:
+          - containerPort: 4000
+            name: angular
+            protocol: TCP
+          resources: {}
+          imagePullPolicy: Always
+          volumeMounts:
+          - name: my-local-config-map
+            mountPath: /app/src/environments/environment.dev.ts
+            subPath: environment.dev.ts
+          # - name: my-local-config-map
+          #   mountPath: /app/src/environments/environment.prod.ts
+          #   subPath: environment.prod.ts
+        - image: alpdspace.azurecr.io/dspace:dev-v1
+          name: dspace
+          ports:
+          - containerPort: 8080
+            name: dspace
+            protocol: TCP
+          resources: {}
+          stdin: true
+          tty: true
+          volumeMounts:
+          - mountPath: "/dspace/assetstore"
+            name: "assetstore"
+          - mountPath: "/dspace/config/local.cfg"
+            name: "my-local-config-map"
+            subPath: local.cfg
+          imagePullPolicy: Always
+          readinessProbe:
+            httpGet:
+              path: /server/api
+              port: 8080
+            initialDelaySeconds: 220
+            timeoutSeconds: 50
+          livenessProbe:
+            httpGet:
+              path: /server/api
+              port: 8080
+            initialDelaySeconds: 220
+            timeoutSeconds: 50
+            periodSeconds: 30
+          command: ['sh', '-c', '/dspace/bin/dspace database migrate; sleep 10; echo "Running index-discovery"; /dspace/bin/dspace index-discovery -b; catalina.sh run']
+        - image: alpdspace.azurecr.io/dspace-solr:latest
+          name: dspace-solr
+          ports:
+          - containerPort: 8983
+            name: solr
+            protocol: TCP
+          resources: {}
+          command:
+              - /bin/bash
+              - -c
+              - |
+                init-var-solr
+                precreate-core authority /opt/solr/server/solr/configsets/authority
+                precreate-core oai /opt/solr/server/solr/configsets/oai
+                precreate-core search /opt/solr/server/solr/configsets/search
+                precreate-core statistics /opt/solr/server/solr/configsets/statistics
+                exec solr -f
+          volumeMounts:
+          - name: "solr-authority"
+            mountPath: "/opt/solr/server/solr/configsets/authority"
+          - name: "solr-oai"
+            mountPath: "/opt/solr/server/solr/configsets/oai"
+          - name: "solr-search"
+            mountPath: "/opt/solr/server/solr/configsets/search"
+          - name: "solr-statistics"
+            mountPath: "/opt/solr/server/solr/configsets/statistics"
+          workingDir: /var/solr/data
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8983
+            initialDelaySeconds: 50
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8983
+            initialDelaySeconds: 60
+            timeoutSeconds: 5
+            periodSeconds: 120
+      imagePullSecrets:
+        - name: "dspace-secret"
