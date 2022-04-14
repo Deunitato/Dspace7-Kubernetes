@@ -1,0 +1,164 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dspace-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rewrite-target: /server/$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  tls:
+  - hosts:
+    - alp-dspace-demo.southeastasia.cloudapp.azure.com
+    secretName: alp-dspace-demo-secret
+  rules:
+    - host: alp-dspace-demo.southeastasia.cloudapp.azure.com
+      http:
+        paths:
+          - path: /server(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: dspace-service
+                port:
+                  number: 8080
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: solr-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /solr/$2
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  tls:
+  - hosts:
+    - alp-dspace-demo.southeastasia.cloudapp.azure.com
+    secretName: alp-dspace-demo-secret
+  rules:
+    - host: alp-dspace-demo.southeastasia.cloudapp.azure.com
+      http:
+        paths:
+          - path: /solr(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: dspace-service
+                port:
+                  number: 8983
+
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  tls:
+  - hosts:
+    - alp-dspace-demo.southeastasia.cloudapp.azure.com
+    secretName: alp-dspace-demo-secret
+  rules:
+    - host: alp-dspace-demo.southeastasia.cloudapp.azure.com
+      http:
+        paths:
+          - path: /(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: dspace-service
+                port:
+                  number: 4000
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# pod that responds to requests to /api/
+# requests to /auth/api/ go to /api/.
+
+# annotations:
+#   ingress.kubernetes.io/rewrite-target: /api/$2
+#   kubernetes.io/ingress.class: "nginx"
+# spec:
+#  rules:
+#   - http:
+#       paths:
+#       - path: /auth/api(/|$)(.*)
+#         backend:
+#           serviceName: myapi
+#           servicePort: myapi-port
+
+
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: backend-ingress
+#   annotations:
+#     kubernetes.io/ingress.class: nginx
+#     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+#     nginx.ingress.kubernetes.io/use-regex: "true"
+#     nginx.ingress.kubernetes.io/rewrite-target: /$2
+# spec:
+#   rules:
+#   - http:
+#       paths:
+#       - path: /server(/|$)(.*)
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: dspace-service
+#             port:
+#               number: 8080
+#       - path: /solr(/|$)(.*)
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: dspace-service
+#             port:
+#               number: 8983
+# ---
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: frontend-ingress-app
+#   annotations:
+#     kubernetes.io/ingress.class: nginx
+#     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+#     nginx.ingress.kubernetes.io/rewrite-target: /app/$2
+# spec:
+#   rules:
+#   - http:
+#       paths:
+#       - path: /app(/|$)(.*)
+#         pathType: ImplementationSpecific
+#         backend:
+#           service:
+#             name: dspace-service
+#             port: 
+#               number: 4000
